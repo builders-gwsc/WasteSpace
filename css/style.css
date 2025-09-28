@@ -1,0 +1,35 @@
+:root {
+  --gw-red: #e30613;
+  --ink: #222;
+  --muted: #666;
+  --bg: #f7f7f8;
+  --card: #fff;
+}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+h1, h2, h3 {
+  color: var(--gw-red);
+}
+button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+button.primary {
+  background: var(--gw-red);
+  color: #fff;
+}
+.card {
+  background: var(--card);
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  padding: 18px;
+  margin: 10px 0;
+}

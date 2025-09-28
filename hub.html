@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Griffin Waste – Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    nav { display:flex; gap:8px; background:#fff; padding:8px; border-bottom:1px solid #ddd; }
+    .tab-btn { padding:8px 12px; border:1px solid #ccc; border-radius:8px; cursor:pointer; }
+    .tab-btn.active { background:var(--gw-red); color:#fff; border-color:var(--gw-red); }
+    section.tab { display:none; padding:12px; }
+    .task-card { border:1px solid #ddd; padding:12px; margin:8px 0; border-radius:8px; background:#fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Griffin Waste – Hub</h1>
+    <button id="logoutBtn">Logout</button>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="assignments">Assignments</button>
+    <button class="tab-btn" data-tab="timeclock">Time Clock</button>
+    <button class="tab-btn" data-tab="calendar">Calendar</button>
+    <button class="tab-btn mgr-only" data-tab="yard">Yard</button>
+    <button class="tab-btn mgr-only" data-tab="routes">Routes</button>
+    <button class="tab-btn" data-tab="pto">My PTO</button>
+    <button class="tab-btn mgr-only" data-tab="reports">Reports</button>
+  </nav>
+
+  <main>
+    <!-- Assignments -->
+    <section id="assignments" class="tab" style="display:block;">
+      <div class="card mgr-only">
+        <h2>Create Assignment</h2>
+        <input id="customerName" placeholder="Customer Name" />
+        <input id="jobAddress" placeholder="Job Address" />
+        <select id="category">
+          <option value="">Category</option>
+          <option>Dumpster</option>
+          <option>Porta-Jon</option>
+          <option>Route</option>
+        </select>
+        <select id="taskType">
+          <option value="">Task</option>
+          <option>Delivery</option>
+          <option>E&R</option>
+          <option>RTS</option>
+          <option>Service</option>
+        </select>
+        <select id="assignee"></select>
+        <button id="assignBtn" class="primary">Assign</button>
+      </div>
+      <h2>Dispatch Board</h2>
+      <div id="assignmentList"></div>
+    </section>
+
+    <!-- Timeclock -->
+    <section id="timeclock" class="tab">
+      <h2>Time Clock (placeholder)</h2>
+      <p>Future: integrate hours & roster view here.</p>
+    </section>
+
+    <!-- Calendar -->
+    <section id="calendar" class="tab">
+      <h2>Calendar (placeholder)</h2>
+      <p>Future: PTO requests & approvals integrated here.</p>
+    </section>
+
+    <!-- Yard -->
+    <section id="yard" class="tab">
+      <h2>Yard Assignments (placeholder)</h2>
+      <p>Future: rack build + yard assignment board.</p>
+    </section>
+
+    <!-- Routes -->
+    <section id="routes" class="tab">
+      <h2>Routes (placeholder)</h2>
+      <p>Future: add route builder and driver view here.</p>
+    </section>
+
+    <!-- PTO -->
+    <section id="pto" class="tab">
+      <h2>My PTO (placeholder)</h2>
+      <p>Future: show requests & approvals here.</p>
+    </section>
+
+    <!-- Reports -->
+    <section id="reports" class="tab">
+      <h2>Reports (placeholder)</h2>
+      <p>Future: CSV export and analytics here.</p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { auth, db } from "./js/config.js";
+    import { logout } from "./js/auth.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { collection, query, where, getDocs, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    document.getElementById("logoutBtn").onclick = logout;
+
+    // Tabs
+    const tabs = document.querySelectorAll(".tab-btn");
+    tabs.forEach(btn => {
+      btn.onclick = () => {
+        tabs.forEach(b=>b.classList.remove("active"));
+        document.querySelectorAll("section.tab").forEach(s=>s.style.display="none");
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).style.display="block";
+      };
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { location.href = "index.html"; return; }
+
+      // Manager assignment creation
+      const sel = document.getElementById("assignee");
+      if (sel) {
+        sel.innerHTML = "<option value=''>Select Driver</option>";
+        const drivers = await getDocs(query(collection(db, "users"), where("role", "==", "driver")));
+        drivers.forEach(ds => {
+          const u = ds.data();
+          const opt = document.createElement("option");
+          opt.value = ds.id;
+          opt.textContent = u.name || u.email || "Driver";
+          sel.appendChild(opt);
+        });
+      }
+
+      const assignBtn = document.getElementById("assignBtn");
+      if (assignBtn) {
+        assignBtn.onclick = async () => {
+          if (!customerName.value || !category.value || !taskType.value || !sel.value) {
+            alert("Fill all fields."); return;
+          }
+          await addDoc(collection(db, "assignments"), {
+            customerName: customerName.value,
+            jobAddress: jobAddress.value,
+            category: category.value,
+            taskType: taskType.value,
+            driverId: sel.value,
+            driverName: sel.selectedOptions[0].textContent,
+            status: "pending",
+            createdAt: serverTimestamp()
+          });
+          alert("Assignment created.");
+          customerName.value = jobAddress.value = category.value = taskType.value = "";
+        };
+      }
+
+      // Live assignment board
+      const listBox = document.getElementById("assignmentList");
+      onSnapshot(collection(db, "assignments"), (snap) => {
+        listBox.innerHTML = "";
+        snap.forEach(ds => {
+          const d = ds.data();
+          const card = document.createElement("div");
+          card.className = "task-card";
+          card.innerHTML = `<h3>${d.customerName}</h3>
+            <p>${d.taskType} (${d.category}) – ${d.driverName}</p>
+            <p>Status: ${d.status}</p>`;
+          listBox.appendChild(card);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

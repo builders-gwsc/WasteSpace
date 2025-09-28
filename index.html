@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Griffin Waste – Portal</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <h1>Griffin Waste – Portal Access</h1>
+  <div class="card">
+    <button id="loginTab" class="primary">Log In</button>
+    <button id="signupTab">Sign Up</button>
+
+    <section id="loginSection">
+      <input id="loginEmail" type="email" placeholder="Email" />
+      <input id="loginPass" type="password" placeholder="Password" />
+      <button id="loginBtn" class="primary">Log In</button>
+      <div id="loginMsg"></div>
+    </section>
+
+    <section id="signupSection" style="display:none;">
+      <input id="suName" type="text" placeholder="Full Name" />
+      <select id="suRole">
+        <option value="driver">Driver</option>
+        <option value="manager">Manager</option>
+        <option value="gm">GM</option>
+      </select>
+      <input id="suEmail" type="email" placeholder="Email" />
+      <input id="suPass" type="password" placeholder="Password" />
+      <button id="signupBtn" class="primary">Sign Up</button>
+      <div id="signupMsg"></div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./js/config.js";
+    import {
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      updateProfile
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+    import { redirectByRole } from "./js/auth.js";
+
+    // Toggle tabs
+    loginTab.onclick=()=>{loginSection.style.display="";signupSection.style.display="none";};
+    signupTab.onclick=()=>{signupSection.style.display="";loginSection.style.display="none";};
+
+    loginBtn.onclick=()=>{
+      signInWithEmailAndPassword(auth,loginEmail.value,loginPass.value)
+        .catch(e=>loginMsg.textContent=e.message);
+    };
+    signupBtn.onclick=()=>{
+      createUserWithEmailAndPassword(auth,suEmail.value,suPass.value)
+        .then(async cred=>{
+          await updateProfile(cred.user,{displayName:suName.value});
+          await setDoc(doc(db,"users",cred.user.uid),{name:suName.value,email:suEmail.value,role:suRole.value});
+        })
+        .catch(e=>signupMsg.textContent=e.message);
+    };
+    onAuthStateChanged(auth,u=>{if(u) redirectByRole(u);});
+  </script>
+</body>
+</html>

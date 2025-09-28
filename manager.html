@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manager Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <h1>Manager Hub</h1>
+  <button id="logoutBtn">Logout</button>
+
+  <div class="card">
+    <h2>Create Assignment</h2>
+    <input id="customerName" placeholder="Customer Name" />
+    <input id="jobAddress" placeholder="Job Address" />
+    <select id="category">
+      <option value="">Category</option>
+      <option>Dumpster</option>
+      <option>Porta-Jon</option>
+      <option>Route</option>
+    </select>
+    <select id="taskType">
+      <option value="">Task</option>
+      <option>Delivery</option>
+      <option>E&R</option>
+      <option>RTS</option>
+      <option>Service</option>
+    </select>
+    <select id="assignee"></select>
+    <button id="assignBtn" class="primary">Assign</button>
+  </div>
+
+  <h2>Assignments</h2>
+  <div id="list"></div>
+
+  <script type="module">
+    import { auth, db } from "./js/config.js";
+    import { logout } from "./js/auth.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { collection, query, where, getDocs, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    document.getElementById("logoutBtn").onclick = logout;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { location.href = "index.html"; return; }
+
+      const sel = document.getElementById("assignee");
+      sel.innerHTML = "<option value=''>Select Driver</option>";
+
+      const drivers = await getDocs(query(collection(db, "users"), where("role", "==", "driver")));
+      drivers.forEach((ds) => {
+        const u = ds.data();
+        const opt = document.createElement("option");
+        opt.value = ds.id;
+        opt.textContent = u.name || u.email || "Driver";
+        sel.appendChild(opt);
+      });
+
+      document.getElementById("assignBtn").onclick = async () => {
+        if (!customerName.value || !category.value || !taskType.value || !sel.value) {
+          alert("Fill all fields."); return;
+        }
+        await addDoc(collection(db, "assignments"), {
+          customerName: customerName.value,
+          jobAddress: jobAddress.value,
+          category: category.value,
+          taskType: taskType.value,
+          driverId: sel.value,
+          driverName: sel.selectedOptions[0].textContent,
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+        alert("Assignment created.");
+        customerName.value = jobAddress.value = category.value = taskType.value = "";
+      };
+
+      onSnapshot(collection(db, "assignments"), (snap) => {
+        const box = document.getElementById("list");
+        box.innerHTML = "";
+        snap.forEach((ds) => {
+          const d = ds.data();
+          box.innerHTML += `<div class="card">
+            <h3>${d.customerName}</h3>
+            <p>${d.taskType} (${d.category}) – ${d.driverName}</p>
+            <p>Status: ${d.status}</p>
+          </div>`;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
