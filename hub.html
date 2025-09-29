@@ -2,169 +2,177 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Griffin Waste – Hub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="css/styles.css" />
-  <style>
-    nav { display:flex; gap:8px; background:#fff; padding:8px; border-bottom:1px solid #ddd; }
-    .tab-btn { padding:8px 12px; border:1px solid #ccc; border-radius:8px; cursor:pointer; }
-    .tab-btn.active { background:var(--gw-red); color:#fff; border-color:var(--gw-red); }
-    section.tab { display:none; padding:12px; }
-    .task-card { border:1px solid #ddd; padding:12px; margin:8px 0; border-radius:8px; background:#fff; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WasteSpace</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- Header -->
   <header>
-    <h1>Griffin Waste – Hub</h1>
-    <button id="logoutBtn">Logout</button>
+    <div class="brand">
+      <img src="assets/logo.png" alt="Griffin Waste Logo" class="logo">
+      WasteSpace
+    </div>
+    <div class="actions">
+      <span id="roleBadge" class="tab-btn active">MANAGER</span>
+      <button id="logoutBtn">Logout</button>
+    </div>
   </header>
 
-  <nav>
+  <!-- Navigation Tabs -->
+  <nav class="navbar">
     <button class="tab-btn active" data-tab="assignments">Assignments</button>
     <button class="tab-btn" data-tab="timeclock">Time Clock</button>
     <button class="tab-btn" data-tab="calendar">Calendar</button>
-    <button class="tab-btn mgr-only" data-tab="yard">Yard</button>
-    <button class="tab-btn mgr-only" data-tab="routes">Routes</button>
-    <button class="tab-btn" data-tab="pto">My PTO</button>
-    <button class="tab-btn mgr-only" data-tab="reports">Reports</button>
+    <button class="tab-btn" data-tab="loadbuilder">Load Builder</button>
+    <button class="tab-btn" data-tab="yard">Yard Assignments</button>
+    <button class="tab-btn" data-tab="routes">Routes</button>
+    <button class="tab-btn" data-tab="timeoff">My Time Off</button>
+    <button class="tab-btn" data-tab="pto">PTO (GM)</button>
+    <button class="tab-btn" data-tab="reports">Reports</button>
   </nav>
 
+  <!-- Sections -->
   <main>
     <!-- Assignments -->
-    <section id="assignments" class="tab" style="display:block;">
-      <div class="card mgr-only">
-        <h2>Create Assignment</h2>
-        <input id="customerName" placeholder="Customer Name" />
-        <input id="jobAddress" placeholder="Job Address" />
-        <select id="category">
-          <option value="">Category</option>
-          <option>Dumpster</option>
-          <option>Porta-Jon</option>
-          <option>Route</option>
-        </select>
-        <select id="taskType">
-          <option value="">Task</option>
-          <option>Delivery</option>
-          <option>E&R</option>
-          <option>RTS</option>
-          <option>Service</option>
-        </select>
-        <select id="assignee"></select>
-        <button id="assignBtn" class="primary">Assign</button>
+    <section id="assignments" class="active card">
+      <h2>Create Assignment</h2>
+      <div class="two-cols">
+        <input id="custName" placeholder="Customer Name">
+        <input id="jobAddr" placeholder="Job Address">
       </div>
-      <h2>Dispatch Board</h2>
+      <div class="row">
+        <select id="category">
+          <option>Delivery</option>
+          <option>Pickup</option>
+          <option>RTS</option>
+        </select>
+        <select id="task">
+          <option>Drop-off</option>
+          <option>Pick-up</option>
+        </select>
+        <select id="driverSelect">
+          <option>Select Driver</option>
+        </select>
+        <button id="assignBtn">Assign</button>
+      </div>
+      <h3>Assignments</h3>
       <div id="assignmentList"></div>
     </section>
 
-    <!-- Timeclock -->
-    <section id="timeclock" class="tab">
-      <h2>Time Clock (placeholder)</h2>
-      <p>Future: integrate hours & roster view here.</p>
+    <!-- Time Clock -->
+    <section id="timeclock" class="card">
+      <h2>Time Clock</h2>
+      <p>Eastern Time • Sunday–Saturday pay week • 30-min lunch auto-deduct unless recorded or confirmed “no lunch”.</p>
+
+      <div class="row" style="gap:8px;flex-wrap:wrap;">
+        <button id="punchInBtn">Punch In</button>
+        <button id="punchOutBtn" disabled>Punch Out</button>
+        <button id="lunchStartBtn" disabled>Start Lunch</button>
+        <button id="lunchStopBtn" disabled>Stop Lunch</button>
+        <button id="confirmNoLunchBtn" class="secondary" disabled>Confirm No Lunch (Add Back 30m)</button>
+      </div>
+
+      <div id="status" class="muted" style="margin-top:8px;">Loading…</div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Your Time</h3>
+        <details open>
+          <summary><strong>Today</strong> <span id="dayTotal" class="muted"></span></summary>
+          <div id="dayEvents" style="margin-top:8px;"></div>
+        </details>
+        <details style="margin-top:10px;">
+          <summary><strong>This Week</strong> <span id="weekTotal" class="muted"></span></summary>
+          <div id="weekEvents" style="margin-top:8px;"></div>
+        </details>
+      </div>
+
+      <!-- Team/Company (visible to manager/gm) -->
+      <div id="mgrWrap" class="card" style="margin-top:16px; display:none;">
+        <h3>Team Summary (This Week)</h3>
+        <div id="teamSummary"></div>
+      </div>
+      <div id="gmWrap" class="card" style="margin-top:16px; display:none;">
+        <h3>Company Total Hours (This Week)</h3>
+        <div id="companySummary"></div>
+        <div style="margin-top:12px;" class="row">
+          <button id="exportCsvBtn" class="secondary">Export CSV (This Week)</button>
+          <span class="muted">A scheduled export (Mon 6am) is available via Cloud Scheduler.</span>
+        </div>
+      </div>
     </section>
 
     <!-- Calendar -->
-    <section id="calendar" class="tab">
-      <h2>Calendar (placeholder)</h2>
-      <p>Future: PTO requests & approvals integrated here.</p>
+    <section id="calendar" class="card">
+      <h2>Calendar</h2>
+      <div id="calendarContainer">[Calendar UI Placeholder]</div>
+    </section>
+
+    <!-- Load Builder -->
+    <section id="loadbuilder" class="card">
+      <h2>Load Builder</h2>
+      <div id="loadBuilderUI">[Load Builder UI Placeholder]</div>
     </section>
 
     <!-- Yard -->
-    <section id="yard" class="tab">
-      <h2>Yard Assignments (placeholder)</h2>
-      <p>Future: rack build + yard assignment board.</p>
+    <section id="yard" class="card">
+      <h2>Yard Assignments</h2>
+      <div id="yardContainer">[Yard Assignment UI Placeholder]</div>
     </section>
 
     <!-- Routes -->
-    <section id="routes" class="tab">
-      <h2>Routes (placeholder)</h2>
-      <p>Future: add route builder and driver view here.</p>
+    <section id="routes" class="card">
+      <h2>Routes</h2>
+      <div id="routesContainer">[Routes UI Placeholder]</div>
+    </section>
+
+    <!-- My Time Off -->
+    <section id="timeoff" class="card">
+      <h2>My Time Off</h2>
+      <button id="reqTimeOff">Request Time Off</button>
+      <div id="timeoffList"></div>
     </section>
 
     <!-- PTO -->
-    <section id="pto" class="tab">
-      <h2>My PTO (placeholder)</h2>
-      <p>Future: show requests & approvals here.</p>
+    <section id="pto" class="card">
+      <h2>PTO (GM)</h2>
+      <div id="ptoList"></div>
     </section>
 
     <!-- Reports -->
-    <section id="reports" class="tab">
-      <h2>Reports (placeholder)</h2>
-      <p>Future: CSV export and analytics here.</p>
+    <section id="reports" class="card">
+      <h2>Reports</h2>
+      <div id="reportsContainer">[Reports Export UI Placeholder]</div>
     </section>
   </main>
 
+  <!-- Scripts -->
+  <script type="module" src="js/auth.js"></script>
   <script type="module">
-    import { auth, db } from "./js/config.js";
     import { logout } from "./js/auth.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-    import { collection, query, where, getDocs, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+    import { initAssignments } from "./js/modules/assignments.js";
+    import { initTimeclock } from "./js/modules/timeclock.js";
 
-    document.getElementById("logoutBtn").onclick = logout;
-
-    // Tabs
+    // Tab switching
     const tabs = document.querySelectorAll(".tab-btn");
+    const sections = document.querySelectorAll("main section");
+
     tabs.forEach(btn => {
-      btn.onclick = () => {
-        tabs.forEach(b=>b.classList.remove("active"));
-        document.querySelectorAll("section.tab").forEach(s=>s.style.display="none");
+      btn.addEventListener("click", () => {
+        tabs.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        document.getElementById(btn.dataset.tab).style.display="block";
-      };
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { location.href = "index.html"; return; }
-
-      // Manager assignment creation
-      const sel = document.getElementById("assignee");
-      if (sel) {
-        sel.innerHTML = "<option value=''>Select Driver</option>";
-        const drivers = await getDocs(query(collection(db, "users"), where("role", "==", "driver")));
-        drivers.forEach(ds => {
-          const u = ds.data();
-          const opt = document.createElement("option");
-          opt.value = ds.id;
-          opt.textContent = u.name || u.email || "Driver";
-          sel.appendChild(opt);
-        });
-      }
-
-      const assignBtn = document.getElementById("assignBtn");
-      if (assignBtn) {
-        assignBtn.onclick = async () => {
-          if (!customerName.value || !category.value || !taskType.value || !sel.value) {
-            alert("Fill all fields."); return;
-          }
-          await addDoc(collection(db, "assignments"), {
-            customerName: customerName.value,
-            jobAddress: jobAddress.value,
-            category: category.value,
-            taskType: taskType.value,
-            driverId: sel.value,
-            driverName: sel.selectedOptions[0].textContent,
-            status: "pending",
-            createdAt: serverTimestamp()
-          });
-          alert("Assignment created.");
-          customerName.value = jobAddress.value = category.value = taskType.value = "";
-        };
-      }
-
-      // Live assignment board
-      const listBox = document.getElementById("assignmentList");
-      onSnapshot(collection(db, "assignments"), (snap) => {
-        listBox.innerHTML = "";
-        snap.forEach(ds => {
-          const d = ds.data();
-          const card = document.createElement("div");
-          card.className = "task-card";
-          card.innerHTML = `<h3>${d.customerName}</h3>
-            <p>${d.taskType} (${d.category}) – ${d.driverName}</p>
-            <p>Status: ${d.status}</p>`;
-          listBox.appendChild(card);
-        });
+        sections.forEach(s => s.classList.remove("active"));
+        document.getElementById(btn.dataset.tab).classList.add("active");
       });
     });
+
+    // Logout
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) logoutBtn.addEventListener("click", () => logout());
+
+    // Init modules
+    initAssignments();
+    initTimeclock();
   </script>
 </body>
 </html>

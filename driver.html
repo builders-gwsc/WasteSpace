@@ -2,84 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Driver Hub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Griffin Waste – Driver</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <h1>Driver Hub</h1>
-  <button id="logoutBtn">Logout</button>
+  <!-- HEADER -->
+  <header class="app-header">
+    <img src="assets/logo.png" alt="Griffin Waste Logo" class="logo"/>
+    <h1>Driver Portal</h1>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+  </header>
 
-  <h2>Active Tasks</h2>
-  <div id="active"></div>
+  <!-- DRIVER NAVIGATION -->
+  <nav class="hub-nav">
+    <button onclick="location.href='hub.html'" class="nav-btn">🏠 Hub</button>
+    <button onclick="alert('Daily Route Map coming soon!')" class="nav-btn">🗺️ Route</button>
+  </nav>
 
-  <h2>Awaiting Ticket</h2>
-  <div id="awaiting"></div>
-
-  <h2>Completed</h2>
-  <div id="completed"></div>
+  <!-- ASSIGNMENTS -->
+  <section>
+    <h2>My Assignments</h2>
+    <ul id="assignmentList"></ul>
+  </section>
 
   <script type="module">
-    import { auth, db, storage } from "./js/config.js";
+    import { auth, db } from "./js/config.js";
     import { logout } from "./js/auth.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-    import { collection, query, where, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
-    import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
+    import {
+      collection, query, onSnapshot, where
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    document.getElementById("logoutBtn").onclick = logout;
+    document.getElementById("logoutBtn").addEventListener("click", logout);
 
-    const sanitize = (name) => name.replace(/\s+/g, "_").replace(/[^\w.\-]/g, "_");
+    // Only show assignments for THIS driver
+    auth.onAuthStateChanged((user) => {
+      if (!user) return;
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) { location.href = "index.html"; return; }
+      const driverName = user.displayName || user.email;
+      const q = query(collection(db, "assignments"), where("driver", "==", driverName));
 
-      const qy = query(collection(db, "assignments"), where("driverId", "==", user.uid));
-      onSnapshot(qy, (snap) => {
-        const active = document.getElementById("active");
-        const awaiting = document.getElementById("awaiting");
-        const completed = document.getElementById("completed");
-        active.innerHTML = awaiting.innerHTML = completed.innerHTML = "";
-
-        snap.forEach((ds) => {
-          const d = ds.data();
-          const id = ds.id;
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `<h3>${d.customerName}</h3>
-            <p>${d.taskType} (${d.category})</p>
-            <p>Status: ${d.status}</p>`;
-
-          if (d.status === "pending") {
-            const hasProof = !!d.proofUrl;
-            card.innerHTML += hasProof
-              ? `<a href="${d.proofUrl}" target="_blank">📷 Proof</a>`
-              : `<input type="file" id="proof-${id}" accept="image/*" />`;
-
-            const btn = document.createElement("button");
-            btn.textContent = "Complete Task";
-            btn.className = "primary";
-            btn.disabled = !hasProof;
-            btn.onclick = async () => {
-              await updateDoc(doc(db, "assignments", id), { status: "complete" });
-            };
-            card.appendChild(btn);
-
-            if (!hasProof) {
-              card.querySelector(`#proof-${id}`).onchange = async (e) => {
-                const f = e.target.files[0];
-                if (!f) return;
-                const safe = sanitize(f.name);
-                const r = ref(storage, `proofs/${id}/${safe}`);
-                await uploadBytes(r, f);
-                const url = await getDownloadURL(r);
-                await updateDoc(doc(db, "assignments", id), { proofUrl: url });
-              };
-            }
-          }
-
-          if (d.status === "awaiting-ticket") awaiting.appendChild(card);
-          else if (d.status === "complete") completed.appendChild(card);
-          else active.appendChild(card);
+      onSnapshot(q, (snapshot) => {
+        const assignmentList = document.getElementById("assignmentList");
+        assignmentList.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          const li = document.createElement("li");
+          li.textContent = `${d.customer} – ${d.task} (${d.category}) @ ${d.address} [${d.status}]`;
+          assignmentList.appendChild(li);
         });
       });
     });

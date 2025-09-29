@@ -4,18 +4,19 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-aut
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
 
-// 🚨 Replace with *your new Firebase project credentials*
+// 🔴 Replace values with your Firebase config (from Project Settings > SDK setup)
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_MSG_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBTFuNqxrFLPE6TIRPXhwryKq3eRSt7PEY",
+  authDomain: "daily-objectives-8922e.firebaseapp.com",
+  databaseURL: "https://daily-objectives-8922e-default-rtdb.firebaseio.com",
+  projectId: "daily-objectives-8922e",
+  storageBucket: "daily-objectives-8922e.firebasestorage.app",
+  messagingSenderId: "450105668325",
+  appId: "1:450105668325:web:e64427c9316403195fda0c",
+  measurementId: "G-9EKLEJJN73"
 };
 
-const app = initializeApp(firebaseConfig);
-
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

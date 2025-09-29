@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- Helpers ---------- */
+    function signedIn() { return request.auth != null; }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function roleOf(uid) {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(uid))
+        ? userDoc(uid).data.role
+        : null;
+    }
+
+    function isGM()      { return roleOf(request.auth.uid) == "gm"; }
+    function isManager() { return roleOf(request.auth.uid) == "manager"; }
+    function isMgrOrGM() { return isGM() || isManager(); }
+
+    /* ---------- users ---------- */
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && (request.auth.uid == uid || isGM());
+      allow delete: if isGM();
+    }
+
+    /* ---------- settings (e.g., default weekly cap) ---------- */
+    match /settings/{doc} {
+      allow read: if signedIn();
+      allow write: if isGM();
+    }
+
+    /* ---------- assignments (dispatch/work orders) ---------- */
+    match /assignments/{id} {
+      allow read: if signedIn();
+
+      // Dev-friendly now; tighten to isMgrOrGM() for prod
+      allow create: if signedIn();
+
+      // Driver may only change limited fields on their own assignment
+      allow update: if signedIn() && (
+        isMgrOrGM() ||
+        (
+          resource.data.driverId == request.auth.uid &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(
+            ["status","proofUrl","ticketUrl","ticketNum","loadPlan"]
+          )
+        )
+      );
+
+      allow delete: if isGM();
+    }
+
+    /* ---------- timeEvents (punches) ---------- */
+    match /timeEvents/{id} {
+      allow read: if signedIn() && (isMgrOrGM() || resource.data.userId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isGM();
+    }
+
+    /* ---------- timeDays (per-day flags & overrides) ---------- */
+    match /timeDays/{id} {
+      allow read: if signedIn() && (isMgrOrGM() || resource.data.userId == request.auth.uid);
+      allow create, update: if signedIn() && (
+        request.resource.data.userId == request.auth.uid || isGM()
+      );
+      allow delete: if isGM();
+    }
+
+    /* ---------- Overtime ---------- */
+    match /otRequests/{id} {
+      allow read: if signedIn() && (isGM() || resource.data.userId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isGM(); // approve/deny
+      allow delete: if isGM() || (
+        signedIn() && resource.data.userId == request.auth.uid && resource.data.status == "pending"
+      );
+    }
+
+    match /otGrants/{id} {
+      allow read: if signedIn() && (isMgrOrGM() || resource.data.userId == request.auth.uid);
+      allow create, update, delete: if isGM();
+    }
+
+    /* ---------- PTO / Time Off ---------- */
+    match /timeOffRequests/{id} {
+      // approved visible to everyone (for calendar); owner & mgr/gm can read too
+      allow read: if signedIn() && (
+        resource.data.status == "approved" ||
+        isMgrOrGM() ||
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isGM();  // approve/deny
+      allow delete: if isGM() || (
+        signedIn() && resource.data.userId == request.auth.uid && resource.data.status == "pending"
+      );
+    }
+
+    /* ---------- yardBuilds (Load Builder + Yard Assignments) ---------- */
+    match /yardBuilds/{id} {
+      allow read: if signedIn();
+      allow create, update: if isMgrOrGM();
+      allow delete: if isGM();
+    }
+
+    /* ---------- routes ---------- */
+    match /routes/{id} {
+      allow read: if signedIn() && (isMgrOrGM() || resource.data.driverId == request.auth.uid);
+      allow create, update: if isMgrOrGM();
+      allow delete: if isGM();
+    }
+  }
+}

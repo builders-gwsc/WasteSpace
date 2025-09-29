@@ -2,90 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Manager Hub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Griffin Waste – Manager</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <h1>Manager Hub</h1>
-  <button id="logoutBtn">Logout</button>
+  <!-- HEADER -->
+  <header class="app-header">
+    <img src="assets/logo.png" alt="Griffin Waste Logo" class="logo"/>
+    <h1>Manager Portal</h1>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+  </header>
 
-  <div class="card">
+  <!-- MANAGER NAVIGATION -->
+  <nav class="hub-nav">
+    <button onclick="location.href='hub.html'" class="nav-btn">🏠 Hub</button>
+    <button onclick="alert('Calendar coming soon!')" class="nav-btn">📅 Calendar</button>
+    <button onclick="alert('PTO Requests coming soon!')" class="nav-btn">📝 PTO Requests</button>
+  </nav>
+
+  <!-- ASSIGNMENT FORM -->
+  <section>
     <h2>Create Assignment</h2>
-    <input id="customerName" placeholder="Customer Name" />
-    <input id="jobAddress" placeholder="Job Address" />
-    <select id="category">
-      <option value="">Category</option>
-      <option>Dumpster</option>
-      <option>Porta-Jon</option>
-      <option>Route</option>
-    </select>
-    <select id="taskType">
-      <option value="">Task</option>
-      <option>Delivery</option>
-      <option>E&R</option>
-      <option>RTS</option>
-      <option>Service</option>
-    </select>
-    <select id="assignee"></select>
-    <button id="assignBtn" class="primary">Assign</button>
-  </div>
+    <div class="form-row">
+      <input id="customerName" placeholder="Customer Name" />
+      <input id="jobAddress" placeholder="Job Address" />
+      <select id="category">
+        <option value="Dumpster">Dumpster</option>
+        <option value="Porta-Jon">Porta-Jon</option>
+      </select>
+      <select id="task">
+        <option value="Delivery">Delivery</option>
+        <option value="Pickup">Pickup</option>
+        <option value="Service">Service</option>
+      </select>
+      <select id="driverSelect">
+        <option value="Anthony">Anthony</option>
+        <option value="Brian Helms">Brian Helms</option>
+      </select>
+      <button id="assignBtn">Assign</button>
+    </div>
+  </section>
 
-  <h2>Assignments</h2>
-  <div id="list"></div>
+  <!-- ASSIGNMENTS -->
+  <section>
+    <h2>Assignments</h2>
+    <ul id="assignmentList"></ul>
+  </section>
 
   <script type="module">
     import { auth, db } from "./js/config.js";
     import { logout } from "./js/auth.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
-    import { collection, query, where, getDocs, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+    import {
+      collection, addDoc, query, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    document.getElementById("logoutBtn").onclick = logout;
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", logout);
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { location.href = "index.html"; return; }
+    // Assignment creation
+    document.getElementById("assignBtn").addEventListener("click", async () => {
+      const customer = document.getElementById("customerName").value;
+      const address = document.getElementById("jobAddress").value;
+      const category = document.getElementById("category").value;
+      const task = document.getElementById("task").value;
+      const driver = document.getElementById("driverSelect").value;
 
-      const sel = document.getElementById("assignee");
-      sel.innerHTML = "<option value=''>Select Driver</option>";
+      if (!customer || !address) {
+        alert("Customer and address required!");
+        return;
+      }
 
-      const drivers = await getDocs(query(collection(db, "users"), where("role", "==", "driver")));
-      drivers.forEach((ds) => {
-        const u = ds.data();
-        const opt = document.createElement("option");
-        opt.value = ds.id;
-        opt.textContent = u.name || u.email || "Driver";
-        sel.appendChild(opt);
+      await addDoc(collection(db, "assignments"), {
+        customer, address, category, task, driver, status: "pending"
       });
+    });
 
-      document.getElementById("assignBtn").onclick = async () => {
-        if (!customerName.value || !category.value || !taskType.value || !sel.value) {
-          alert("Fill all fields."); return;
-        }
-        await addDoc(collection(db, "assignments"), {
-          customerName: customerName.value,
-          jobAddress: jobAddress.value,
-          category: category.value,
-          taskType: taskType.value,
-          driverId: sel.value,
-          driverName: sel.selectedOptions[0].textContent,
-          status: "pending",
-          createdAt: serverTimestamp()
-        });
-        alert("Assignment created.");
-        customerName.value = jobAddress.value = category.value = taskType.value = "";
-      };
-
-      onSnapshot(collection(db, "assignments"), (snap) => {
-        const box = document.getElementById("list");
-        box.innerHTML = "";
-        snap.forEach((ds) => {
-          const d = ds.data();
-          box.innerHTML += `<div class="card">
-            <h3>${d.customerName}</h3>
-            <p>${d.taskType} (${d.category}) – ${d.driverName}</p>
-            <p>Status: ${d.status}</p>
-          </div>`;
-        });
+    // Live assignments
+    const q = query(collection(db, "assignments"));
+    onSnapshot(q, (snapshot) => {
+      const assignmentList = document.getElementById("assignmentList");
+      assignmentList.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const d = doc.data();
+        const li = document.createElement("li");
+        li.textContent = `${d.customer} – ${d.task} (${d.category}) → ${d.driver} [${d.status}]`;
+        assignmentList.appendChild(li);
       });
     });
   </script>
